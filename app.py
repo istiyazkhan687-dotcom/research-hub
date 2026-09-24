@@ -4,299 +4,172 @@ import pandas as pd
 from datetime import datetime
 
 st.set_page_config(
-    page_title="ScholarExchange | Academic Research Portal",
-    page_icon="🎓",
+    page_title="Academic Resource & Survey Vault",
+    page_icon="🎁",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# تیز رفتار اسٹائلنگ اور واضح ٹیکسٹ کلرز
+# اسٹائلنگ
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-    
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap');
     html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
+        font-family: 'Plus Jakarta Sans', sans-serif;
     }
-    
-    .hero-container {
-        background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
-        padding: 30px 25px;
-        border-radius: 14px;
-        color: white;
+    .value-box {
+        background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+        border: 2px solid #6366f1;
+        border-radius: 16px;
+        padding: 30px;
+        text-align: center;
         margin-bottom: 25px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
     }
-    .hero-title {
-        font-size: 2.2rem;
-        font-weight: 800;
-        margin-bottom: 8px;
-        color: #ffffff;
-    }
-    .hero-subtitle {
-        font-size: 1rem;
-        color: #cbd5e1;
-        max-width: 850px;
-        line-height: 1.6;
-    }
-
-    .academic-card {
+    .lock-card {
         background-color: #1e293b;
-        border: 1px solid #334155;
+        border: 1px dashed #64748b;
         border-radius: 12px;
         padding: 20px;
+        text-align: center;
         margin-bottom: 15px;
     }
-    .card-title {
-        color: #ffffff !important;
-        font-size: 1.35rem;
-        font-weight: 700;
-        margin-top: 6px;
-        margin-bottom: 6px;
-    }
-    .badge-field {
-        background-color: #2563eb;
-        color: #ffffff;
-        padding: 4px 12px;
-        border-radius: 16px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        display: inline-block;
-    }
-    .badge-active {
-        background-color: #10b981;
-        color: #ffffff;
-        padding: 4px 12px;
-        border-radius: 16px;
-        font-size: 0.8rem;
-        font-weight: 600;
-    }
-    .badge-closed {
-        background-color: #ef4444;
-        color: #ffffff;
-        padding: 4px 12px;
-        border-radius: 16px;
-        font-size: 0.8rem;
-        font-weight: 600;
-    }
-
-    .footer {
+    .unlocked-card {
+        background-color: #064e3b;
+        border: 2px solid #10b981;
+        border-radius: 12px;
+        padding: 20px;
         text-align: center;
-        padding: 30px 0 15px 0;
-        color: #94a3b8;
-        font-size: 0.85rem;
-        border-top: 1px solid #334155;
-        margin-top: 40px;
+        margin-bottom: 15px;
     }
 </style>
 """, unsafe_allow_html=True)
 
+# ڈیٹا بیس
 @st.cache_resource
-def get_db_connection():
+def get_db():
     conn = sqlite3.connect("research.db", check_same_thread=False)
-    conn.execute("PRAGMA journal_mode=WAL;")
     conn.execute("""
-    CREATE TABLE IF NOT EXISTS surveys (
+    CREATE TABLE IF NOT EXISTS auto_responses (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT,
-        researcher_name TEXT,
-        target_field TEXT,
-        form_link TEXT,
-        target_responses INTEGER DEFAULT 50,
-        credits_offered INTEGER DEFAULT 10,
-        responses_collected INTEGER DEFAULT 0,
-        is_active INTEGER DEFAULT 1
-    )
-    """)
-    conn.execute("""
-    CREATE TABLE IF NOT EXISTS survey_responses (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        survey_id INTEGER,
-        respondent_name TEXT,
-        respondent_university TEXT,
+        name TEXT,
+        university TEXT,
         submitted_at TEXT
     )
     """)
-    conn.execute("UPDATE surveys SET responses_collected = 0 WHERE responses_collected IS NULL;")
     conn.commit()
     return conn
 
-conn = get_db_connection()
-
-# ہیرو سیکشن
-st.markdown("""
-<div class="hero-container">
-    <div class="hero-title">🎓 ScholarExchange</div>
-    <div class="hero-subtitle">
-        یونیورسٹی ریسرچرز، ایم ایس اور پی ایچ ڈی اسکالرز کے لیے مستند سروے شیئرنگ اور حقیقی ڈیٹا کلیکشن کا نیشنل پورٹل۔
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-# میٹرکس (فوری کیشڈ کیلکولیشن)
+conn = get_db()
 cur = conn.cursor()
-cur.execute("SELECT COUNT(*), SUM(COALESCE(responses_collected, 0)), SUM(COALESCE(credits_offered, 0)) FROM surveys")
-total_surveys, total_resp, total_credits = cur.fetchone()
-total_surveys = total_surveys or 0
-total_resp = total_resp or 0
-total_credits = total_credits or 0
 
-stat_c1, stat_c2, stat_c3, stat_c4 = st.columns(4)
-stat_c1.metric("کل فعال سرویز", f"{total_surveys}")
-stat_c2.metric("جمع شدہ رسپانسز", f"{total_resp}")
-stat_c3.metric("مجموعی کریڈٹس پول", f"{total_credits} Pts")
-stat_c4.metric("کامیابی کا تناسب", f"{(total_resp / (total_surveys * 50) * 100) if total_surveys else 100:.1f}%")
-
-st.write("")
-
-main_tab, publish_tab, resources_tab = st.tabs([
-    "🌐 ایکسپلور سرویز (Surveys Directory)", 
-    "➕ نیا سروے شائع کریں (Submit Survey)", 
-    "📚 ڈیٹا سیٹس و اکیڈمک ٹولز (Resources)"
-])
-
-# ----------------- ٹیب 1: سرویز ڈائرکٹری -----------------
-with main_tab:
-    f1, f2 = st.columns([3, 1])
-    with f1:
-        search_query = st.text_input("🔍 عنوان یا محقق کے نام سے سرچ کریں...", "")
-    with f2:
-        field_filter = st.selectbox(
-            "شعبہ منتخب کریں:", 
-            ["تمام شعبہ جات", "Finance & Banking", "Economics", "Management Sciences", "Data Science & IT", "Social Sciences"]
-        )
-
-    query = "SELECT id, title, researcher_name, target_field, form_link, target_responses, credits_offered, responses_collected, is_active FROM surveys WHERE 1=1"
-    params = []
-    
-    if search_query:
-        query += " AND (title LIKE ? OR researcher_name LIKE ?)"
-        params.extend([f"%{search_query}%", f"%{search_query}%"])
-    if field_filter != "تمام شعبہ جات":
-        query += " AND target_field = ?"
-        params.append(field_filter)
-        
-    query += " ORDER BY is_active DESC, id DESC"
-    cur.execute(query, params)
-    surveys = cur.fetchall()
-
-    if not surveys:
-        st.info("اس تلاش کے مطابق فی الحال کوئی ریسرچ سروے دستیاب نہیں۔")
-    else:
-        for s in surveys:
-            s_id, s_title, s_res, s_field, s_link, s_target, s_cred, s_collected, s_active = s
-            s_collected = s_collected or 0
-            s_target = s_target or 1
-            s_cred = s_cred or 0
-            
-            with st.container():
-                st.markdown(f"""
-                <div class="academic-card">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="badge-field">{s_field}</span>
-                        <span class="{'badge-active' if s_active else 'badge-closed'}">{'🟢 فعال' if s_active else '🔴 مکمل شدہ'}</span>
-                    </div>
-                    <div class="card-title">{s_title}</div>
-                    <div style="color: #cbd5e1; font-size: 0.95rem;">
-                        👤 محقق: <strong style="color: #ffffff;">{s_res}</strong> | 🪙 پیش کردہ کریڈٹس: <strong style="color: #f59e0b;">{s_cred} Points</strong>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                p_col1, p_col2 = st.columns([3, 1])
-                with p_col1:
-                    progress_val = min(float(s_collected) / float(s_target), 1.0)
-                    st.progress(progress_val)
-                    st.caption(f"ہدف پیش رفت: {s_collected} از {s_target} مستند رسپانسز مکمل")
-                with p_col2:
-                    st.link_button("🔗 سروے فارم پر جائیں", s_link, use_container_width=True)
-
-                # رسپانس اندراج
-                if s_active:
-                    with st.expander("✍️ سروے فل کر لیا ہے؟ کریڈٹ کلیم کے لیے اپنا اندراج کریں"):
-                        rc1, rc2 = st.columns(2)
-                        with rc1:
-                            r_name = st.text_input("آپ کا مکمل نام", key=f"name_{s_id}")
-                        with rc2:
-                            r_uni = st.text_input("آپ کا تعلیمی ادارہ / یونیورسٹی", key=f"uni_{s_id}")
-                        
-                        btn_col1, btn_col2 = st.columns([2, 1])
-                        with btn_col1:
-                            if st.button("تصدیقی اندراج جمع کریں", key=f"btn_{s_id}", type="primary"):
-                                if r_name and r_uni:
-                                    now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-                                    cur.execute("INSERT INTO survey_responses (survey_id, respondent_name, respondent_university, submitted_at) VALUES (?, ?, ?, ?)",
-                                                (s_id, r_name, r_uni, now_str))
-                                    new_count = s_collected + 1
-                                    new_active = 0 if new_count >= s_target else 1
-                                    cur.execute("UPDATE surveys SET responses_collected = ?, is_active = ? WHERE id = ?", (new_count, new_active, s_id))
-                                    conn.commit()
-                                    st.success("آپ کا اندراج ریکارڈ ہو گیا!")
-                                    st.rerun()
-                                else:
-                                    st.warning("براہ کرم نام اور ادارے کا نام درج کریں۔")
-                        
-                        # ڈیمانڈ پر CSV ایکسپورٹ (صرف کلک کرنے پر کوئری چلے گی)
-                        with btn_col2:
-                            cur.execute("SELECT COUNT(*) FROM survey_responses WHERE survey_id = ?", (s_id,))
-                            count_r = cur.fetchone()[0]
-                            if count_r > 0:
-                                cur.execute("SELECT respondent_name, respondent_university, submitted_at FROM survey_responses WHERE survey_id = ?", (s_id,))
-                                raw_rows = cur.fetchall()
-                                df_temp = pd.DataFrame(raw_rows, columns=["اسم_محقق", "ادارہ_یونیورسٹی", "وقت_اندراج"])
-                                st.download_button(
-                                    label="📥 ڈاؤن لوڈ CSV",
-                                    data=df_temp.to_csv(index=False).encode('utf-8-sig'),
-                                    file_name=f"survey_{s_id}_data.csv",
-                                    mime="text/csv",
-                                    key=f"dl_{s_id}"
-                                )
-                st.write("")
-
-# ----------------- ٹیب 2: نیا سروے شائع کریں -----------------
-with publish_tab:
-    st.subheader("اپنا ریسرچ سروے پورٹل پر درج کروائیں")
-    with st.form("new_survey_web_form", clear_on_submit=True):
-        f_title = st.text_input("مقالے / ریسرچ کا مکمل عنوان (Title)")
-        f_name = st.text_input("پرنسپل انویسٹی گیٹر / محقق کا نام")
-        f_field = st.selectbox(
-            "تحقیقی فیلڈ", 
-            ["Finance & Banking", "Economics", "Management Sciences", "Data Science & IT", "Social Sciences"]
-        )
-        f_url = st.text_input("گوگل فارم کا لنک (URL)")
-        
-        col_t1, col_t2 = st.columns(2)
-        with col_t1:
-            f_target = st.number_input("مطلوبہ سیمپل سائز", min_value=10, max_value=2000, value=50, step=5)
-        with col_t2:
-            f_credits = st.number_input("پیش کردہ کریڈٹس", min_value=5, max_value=100, value=15, step=5)
-            
-        submit_btn = st.form_submit_button("🚀 سروے شائع کریں", type="primary")
-
-    if submit_btn:
-        if f_title and f_name and f_url:
-            cur.execute("""
-                INSERT INTO surveys (title, researcher_name, target_field, form_link, target_responses, credits_offered, responses_collected, is_active)
-                VALUES (?, ?, ?, ?, ?, ?, 0, 1)
-            """, (f_title, f_name, f_field, f_url, f_target, f_credits))
-            conn.commit()
-            st.success("سروے شائع ہو گیا!")
-            st.rerun()
-        else:
-            st.error("تمام ضروری معلومات فراہم کریں۔")
-
-# ----------------- ٹیب 3: اکیڈمک وسائل -----------------
-with resources_tab:
-    st.subheader("تحقیقی ٹولز اور معاون ریفرنسز")
-    st.markdown("""
-    * **State Bank of Pakistan (SBP) Data Portal:** ملکی میکرو اور مائیکرو اکنامک اشاریے
-    * **Likert Scale Reliability Guidelines:** کرونبیک الفا اور اسکیل تصدیق
-    * **SPSS & SmartPLS Clean Templates:** پرائمری ڈیٹا کے لیے تجزیاتی ٹیمپلیٹس
-    """)
-
-# فوٹر
+# ہیرو پیشکش (Incentive Offer)
 st.markdown("""
-<div class="footer">
-    ScholarExchange &copy; 2026 | Academic Research & Survey Portal
+<div class="value-box">
+    <h1 style="color: #ffffff; margin-bottom: 10px;">🎁 ایم ایس و پی ایچ ڈی ریسرچ پیک (مفت رسائی)</h1>
+    <p style="color: #cbd5e1; font-size: 1.15rem; max-width: 800px; margin: auto;">
+        ہمارا مختصر 2 منٹ کا ریسرچ سروے مکمل کریں اور فوری طور پر اکیڈمک تھیسز ٹیمپلیٹس، SPSS/SmartPLS گائیڈز اور تصدیق شدہ اسکیلز تک مفت رسائی حاصل کریں۔
+    </p>
 </div>
 """, unsafe_allow_html=True)
+
+# اسٹیٹس چیک
+if "survey_done" not in st.session_state:
+    st.session_state.survey_done = False
+
+col_left, col_right = st.columns([1.2, 1])
+
+with col_left:
+    st.subheader("📋 مرحلہ 1: ریسرچ سروے مکمل کریں")
+    st.info("سروے کو یہیں نیچے مکمل کریں یا الگ ونڈو میں کھولنے کے لیے بٹن دبائیں۔")
+    
+    # اپنا اصل گوگل فارم لنک یہاں لگائیں
+    survey_url = "https://docs.google.com/forms/d/e/1FAIpQLSe-YOUR_FORM_ID/viewform?embedded=true"
+    
+    # ایمبیڈڈ گوگل فارم فریم
+    st.markdown(f"""
+    <iframe src="{survey_url}" width="100%" height="520" frameborder="0" marginheight="0" marginwidth="0">لوڈ ہو رہا ہے…</iframe>
+    """, unsafe_allow_html=True)
+
+with col_right:
+    st.subheader("🔓 مرحلہ 2: اپنا ریسرچ مٹیریل انلاک کریں")
+    
+    if not st.session_state.survey_done:
+        st.markdown("""
+        <div class="lock-card">
+            <h3 style="color: #94a3b8;">🔒 ڈاؤن لوڈز فی الحال لاک ہیں</h3>
+            <p style="color: #64748b; font-size: 0.9rem;">
+                فارم سبمٹ کرنے کے بعد نیچے اپنا نام درج کر کے انلاک کا بٹن دبائیں۔
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        with st.form("unlock_form"):
+            user_name = st.text_input("آپ کا نام")
+            user_uni = st.text_input("یونیورسٹی / ادارہ")
+            confirm_box = st.checkbox("میں تصدیق کرتا ہوں کہ میں نے سروے فارم مکمل کر لیا ہے")
+            unlock_btn = st.form_submit_button("🚀 میٹریل انلاک کریں", type="primary")
+
+        if unlock_btn:
+            if user_name and user_uni and confirm_box:
+                now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+                cur.execute("INSERT INTO auto_responses (name, university, submitted_at) VALUES (?, ?, ?)", 
+                            (user_name, user_uni, now_str))
+                conn.commit()
+                st.session_state.survey_done = True
+                st.balloons()
+                st.rerun()
+            else:
+                st.error("براہ کرم تمام معلومات درج کریں اور تصدیق پر نشان لگائیں۔")
+    else:
+        st.markdown("""
+        <div class="unlocked-card">
+            <h3 style="color: #34d399;">🎉 تمام ریسرچ وسائل انلاک ہو گئے ہیں!</h3>
+            <p style="color: #d1fae5; font-size: 0.95rem;">
+                تعاون کا بہت شکریہ۔ آپ کے لیے تیار کردہ میٹریل نیچے ڈاؤن لوڈ کے لیے دستیاب ہے:
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # فوری قیمتی مواد کے ڈاؤن لوڈز
+        st.success("✅ تصدیق مکمل! فائلز پر کلک کر کے ڈاؤن لوڈ کریں:")
+        
+        st.download_button(
+            label="📥 MS/MPhil تھیسز کا معیاری فارمیٹ (MS Word Template)",
+            data="Sample MS Thesis Structure with APA 7th Referencing Guidelines and Chapter Divisions",
+            file_name="MS_Thesis_Standard_Template.txt",
+            mime="text/plain",
+            use_container_width=True
+        )
+        
+        st.download_button(
+            label="📥 SmartPLS اور SPSS ڈیٹا کلیننگ چیک لسٹ (PDF/Doc)",
+            data="Normality test, Multicollinearity (VIF), Cronbach Alpha and Composite Reliability guidelines",
+            file_name="Data_Screening_Guidelines.txt",
+            mime="text/plain",
+            use_container_width=True
+        )
+
+        st.download_button(
+            label="📥 بینکنگ و مالیاتی اشاریوں کا ڈیٹا سورس شیٹ (Excel)",
+            data="Financial Ratios, CAMELS framework indicators and SBP statistical handbook references",
+            file_name="Financial_Analysis_Sources.txt",
+            mime="text/plain",
+            use_container_width=True
+        )
+
+# ایڈمن کے لیے رسپانسز ڈاؤن لوڈ کرنا
+st.divider()
+with st.expander("🔐 محقق کا لاگ ان (ڈاؤن لوڈ رسپانسز)"):
+    cur.execute("SELECT name as 'نام', university as 'یونیورسٹی', submitted_at as 'تاریخ' FROM auto_responses")
+    rows = cur.fetchall()
+    if rows:
+        df_log = pd.DataFrame(rows, columns=["نام", "یونیورسٹی", "تاریخ"])
+        st.write(f"مجموعی تصدیق شدہ شرکاء: **{len(df_log)}**")
+        st.download_button(
+            label="📥 تمام رسپانسز CSV میں ڈاؤن لوڈ کریں",
+            data=df_log.to_csv(index=False).encode('utf-8-sig'),
+            file_name="verified_responses.csv",
+            mime="text/csv"
+        )
+    else:
+        st.caption("ابھی تک کوئی نیا اندراج نہیں ہوا۔")
