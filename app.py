@@ -3,12 +3,12 @@ import datetime
 import pandas as pd
 import urllib.request
 import urllib.parse
-import json
+import xml.etree.ElementTree as ET
 
 # Page Configuration
 st.set_page_config(
-    page_title="ScholarExchange | Automated Research & Survey Data Engine",
-    page_icon="📊",
+    page_title="ScholarExchange | Real-Time Live Research & Survey Engine",
+    page_icon="⚡",
     layout="wide"
 )
 
@@ -26,7 +26,7 @@ st.markdown("""
 st.sidebar.markdown("### 🎓 ScholarExchange Hub")
 app_mode = st.sidebar.radio("Select Module", [
     "🚀 In-Depth Research Generator", 
-    "📊 Automated Survey & Dataset Fetcher"
+    "🌐 Live Internet Survey & Data Fetcher"
 ])
 
 current_date = datetime.datetime.now().strftime("%B %d, %Y")
@@ -113,50 +113,62 @@ if app_mode == "🚀 In-Depth Research Generator":
                 )
 
 else:
-    st.title("📊 Automated Survey & Dataset Fetcher")
-    st.markdown("Yahan aap apna research topic enter karein. App khud-ba-khud internet se pehle se mojood survey data aur statistical datasets ko automatic fetch kar ke aap ke samne le aaye gi—kisi form bharne ki zaroorat nahi!")
+    st.title("🌐 Live Internet Survey & Data Fetcher")
+    st.markdown("Yahan apna research topic likhein. Yeh module foran internet ki global academic repositories se **real-time live research papers aur unka data** khud-ba-khud fetch kar ke laye ga!")
 
-    search_topic = st.text_input("🎯 Enter Topic to Auto-Fetch Existing Survey Data:", placeholder="e.g., Artificial Intelligence, Islamic Banking, FinTech")
+    live_query = st.text_input("🎯 Enter Topic to Live-Fetch Research Data from Internet:", placeholder="e.g., Artificial Intelligence in Banking, Blockchain, Islamic Finance")
 
-    if st.button("Auto-Fetch Pre-Existing Survey Data ⚡"):
-        if not search_topic.strip():
+    if st.button("Fetch Live Data from Internet 🚀"):
+        if not live_query.strip():
             st.warning("⚠️ Barah-e-karam pehle koi topic enter karein!")
         else:
-            with st.spinner("🔄 Automatically querying global survey repositories and open datasets... Please wait."):
-                
-                # Automatically generating structured survey dataset based on topic query
-                clean_q = search_topic.strip()
-                
-                # Creating an automated professional dataset representing pre-existing survey results
-                simulated_survey_data = pd.DataFrame({
-                    "Respondent_ID": [101, 102, 103, 104, 105, 106, 107, 108, 109, 110],
-                    "Sector_Domain": [clean_q]*10,
-                    "Adoption_Rate_Score": [85, 78, 92, 65, 88, 79, 95, 70, 82, 90],
-                    "Efficiency_Impact": ["High", "Moderate", "High", "Low", "High", "Moderate", "High", "Moderate", "High", "High"],
-                    "Regulatory_Compliance": ["Strong", "Neutral", "Strong", "Weak", "Strong", "Neutral", "Strong", "Weak", "Strong", "Strong"],
-                    "Region": ["Global / Regional", "Asia-Pacific", "Middle East", "North America", "Europe", "South Asia", "Global", "Middle East", "Asia-Pacific", "Europe"]
-                })
-
-                st.success(f"✅ Mukammal taur par '{clean_q}' se mutaliqa pre-existing survey datasets automatically fetch ho gaye hain!")
-                
-                st.markdown("### 📈 Auto-Fetched Survey Data Preview")
-                st.dataframe(simulated_survey_data)
-
-                # Statistical Summary metrics
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric(label="Total Survey Records Fetched", value=len(simulated_survey_data))
-                with col2:
-                    avg_score = simulated_survey_data["Adoption_Rate_Score"].mean()
-                    st.metric(label="Average Adoption Score", value=f"{avg_score}%")
-                with col3:
-                    st.metric(label="Data Reliability Index", value="98.4%")
-
-                # Direct Download Button for Auto-Fetched Data
-                csv_download = simulated_survey_data.to_csv(index=False).encode('utf-8')
-                st.download_button(
-                    label="📥 Download Auto-Fetched Survey Dataset (.csv)",
-                    data=csv_download,
-                    file_name=f"{clean_q.replace(' ', '_')}_Auto_Survey_Data.csv",
-                    mime="text/csv"
-                )
+            with st.spinner("🔄 Connecting to global research APIs to live-fetch data... Please wait."):
+                try:
+                    # Real-time API call to fetch actual live papers and survey data
+                    encoded_q = urllib.parse.quote(live_query.strip())
+                    api_url = f"http://export.arxiv.org/api/query?search_query=all:{encoded_q}&start=0&max_results=5"
+                    
+                    req = urllib.request.Request(api_url, headers={'User-Agent': 'Mozilla/5.0'})
+                    response = urllib.request.urlopen(req, timeout=8)
+                    xml_data = response.read()
+                    
+                    root = ET.fromstring(xml_data)
+                    ns = {'atom': 'http://www.w3.org/2005/Atom'}
+                    entries = root.findall('atom:entry', ns)
+                    
+                    if not entries:
+                        st.info("Is topic par internet par mazeed live records nahi mile. Koshish karein ke koi aur English keyword likhein.")
+                    else:
+                        st.success(f"✅ Internet se bilkul live **{len(entries)} research papers aur data records** successfully fetch ho gaye hain!")
+                        
+                        live_records = []
+                        export_text = f"# LIVE FETCHED RESEARCH DATA FOR: {live_query}\n\n"
+                        
+                        for idx, entry in enumerate(entries, 1):
+                            title = entry.find('atom:title', ns).text.strip().replace('\n', ' ')
+                            summary = entry.find('atom:summary', ns).text.strip().replace('\n', ' ')
+                            published = entry.find('atom:published', ns).text[:10]
+                            link = entry.find('atom:id', ns).text.strip()
+                            
+                            live_records.append({
+                                "No.": idx,
+                                "Research Title": title,
+                                "Published Date": published,
+                                "Repository Link": link,
+                                "Abstract Summary": summary[:200] + "..."
+                            })
+                            
+                            export_text += f"### {idx}. {title}\n- **Date:** {published}\n- **Link:** {link}\n- **Summary:** {summary}\n\n---\n"
+                        
+                        df_live = pd.DataFrame(live_records)
+                        st.dataframe(df_live)
+                        
+                        # Download live fetched data
+                        st.download_button(
+                            label="📥 Download Live Internet Research Data (.txt)",
+                            data=export_text,
+                            file_name=f"{live_query.replace(' ', '_')}_Live_Data.txt",
+                            mime="text/plain"
+                        )
+                except Exception as ex:
+                    st.error(f"Live data fetch karne mein connection error aya hai: {ex}")
