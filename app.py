@@ -37,7 +37,6 @@ if st.button("Generate Professional Research Report 🚀"):
             current_date = datetime.datetime.now().strftime("%B %d, %Y")
             clean_topic = topic.strip()
 
-            # Professional Detailed Research Report Content
             professional_report = f"""# PROFESSIONAL ACADEMIC RESEARCH REPORT
 
 * **Research Topic:** {clean_topic}
@@ -91,25 +90,22 @@ if st.button("Generate Professional Research Report 🚀"):
 
             st.success("🎉 Aap ki professional research report kamyabi ke sath generate ho gayi hai!")
 
-            # Display Report
+            # Display Report Card
             st.markdown('<div class="research-card">', unsafe_allow_html=True)
             st.markdown(professional_report)
             st.markdown('</div>', unsafe_allow_html=True)
 
-            # Export Options
-            st.markdown("### 📥 Export & Download Options")
-            col1, col2 = st.columns(2)
-            with col1:
-                st.download_button(
-                    label="📄 Download Professional Report (.txt)",
-                    data=professional_report,
-                    file_name=f"{clean_topic.replace(' ', '_')}_Professional_Research.txt",
-                    mime="text/plain"
-                )
-            with col2:
-                st.download_button(
-                    label="📑 Download as Markdown (.md)",
-                    data=professional_report,
-                    file_name=f"{clean_topic.replace(' ', '_')}_Professional_Research.md",
-                    mime="text/markdown"
-                )
+            # Export & Backup Copy Section
+            st.markdown("### 📥 Export & Backup Options")
+            
+            # Streamlit Download Button (Click twice if needed)
+            st.download_button(
+                label="📥 Click Here to Download Report File (.txt)",
+                data=professional_report,
+                file_name=f"{clean_topic.replace(' ', '_')}_Research.txt",
+                mime="text/plain"
+            )
+            
+            # Backup Text Area (So user can easily copy if download button fails on mobile/browser)
+            st.markdown("💡 **Alternative Option:** Agar download button kaam na kare, toh aap neechay diye gaye box se poora text select karke copy kar sakte hain:")
+            st.text_area("Copy Report Text:", value=professional_report, height=200)
